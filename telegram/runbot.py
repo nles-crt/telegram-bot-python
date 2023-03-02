@@ -11,7 +11,7 @@ proxies = {
     "http": "http://127.0.0.1:7890",
     "https": "http://127.0.0.1:7890"
 }
-
+#使用本地代理访问api.telegram域名
 def getinfo(request):
     if request.body:
         data = request.body.decode('utf-8')
@@ -37,7 +37,7 @@ def postdata(senddata):
         'parse_mode':'Markdown'
     }
     print(data)
-    send_text = 'https://api.telegram.org/bot6290859152:AAF7KhxgW7ReuImLxy0gYL-WbCtx81SLkbo/sendMessage'
+    send_text = 'https://api.telegram.org/bot这里设置机器人tk/sendMessage'
     if requests.post(url=send_text,proxies=proxies, headers=headers,json=data).status_code == 200:
         code = True
     else:
@@ -45,7 +45,7 @@ def postdata(senddata):
     return code
 def mess(user_id):
     if user_id is None:
-        user_id = -1001501401953
+        user_id = #设置频道 例如-1001501432435
     url = 'https://www.10fzw.com/'
     data = requests.get(url=url, proxies=proxies).text
     selector = etree.HTML(data)
@@ -89,7 +89,6 @@ def post(request):
 
 while True:
     # 获取当前时间
-    time.sleep(0.8)
     now = datetime.datetime.now()
     print(now.hour, now.minute, now.second)
     # 判断是否到了执行时间（每天中午12点）

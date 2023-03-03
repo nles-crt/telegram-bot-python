@@ -1,6 +1,7 @@
 import time
 import datetime
-
+import os
+import openai
 from django.http import HttpResponse
 from django.shortcuts import render
 import requests
@@ -11,7 +12,7 @@ proxies = {
     "http": "http://127.0.0.1:7890",
     "https": "http://127.0.0.1:7890"
 }
-#使用本地代理访问api.telegram域名
+
 def getinfo(request):
     if request.body:
         data = request.body.decode('utf-8')
@@ -37,7 +38,7 @@ def postdata(senddata):
         'parse_mode':'Markdown'
     }
     print(data)
-    send_text = 'https://api.telegram.org/bot这里设置机器人tk/sendMessage'
+    send_text = 'https://api.telegram.org/bot6290859152:AAF7KhxgW7ReuImLxy0gYL-WbCtx81SLkbo/sendMessage'
     if requests.post(url=send_text,proxies=proxies, headers=headers,json=data).status_code == 200:
         code = True
     else:
@@ -45,7 +46,7 @@ def postdata(senddata):
     return code
 def mess(user_id):
     if user_id is None:
-        user_id = #设置频道 例如-1001501432435
+        user_id = -1001501401953
     url = 'https://www.10fzw.com/'
     data = requests.get(url=url, proxies=proxies).text
     selector = etree.HTML(data)
@@ -67,6 +68,32 @@ def mess(user_id):
             senddata = {'user': user_id, 'text': data}
             postdata(senddata=senddata)
 
+
+
+
+def mesopenai(text):
+    openai.api_key = ("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")
+    os.environ["HTTP_PROXY"] = proxies["http"]
+    os.environ["HTTPS_PROXY"] = proxies["https"]
+    response = requests.post(
+        "https://api.openai.com/v1/completions",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openai.api_key}",
+        },
+        json={
+            "model": "text-davinci-003",
+            "prompt": text,
+            "temperature": 0.7,
+            "max_tokens": 256,
+            "top_p": 1,
+            "frequency_penalty": 0,
+            "presence_penalty": 0
+        }, proxies=proxies)
+    aidata = response.json()['choices'][0]['text']
+    print(aidata)
+    return aidata
+
 def post(request):
     try:
         text = getinfo(request)['text']
@@ -75,6 +102,14 @@ def post(request):
             print(user_id, text)
             if user_id < 0 and text == '资源':
                 mess(user_id=user_id)
+            elif '/test ' in text:
+                print('分支二')
+                senddata = {'user': user_id, 'text':'稍等几秒钟'}
+
+                postdata(senddata)
+                text = mesopenai(text=text.split('/test ')[1].strip())
+                senddata = {'user': user_id, 'text':text}
+                postdata(senddata)
             else:
                 senddata = {'user': user_id, 'text': text}
                 postdata(senddata)
@@ -87,8 +122,9 @@ def post(request):
         #href_content = selector.xpath('//ul/ul/li[@class='new']/a/@href')
 
 
-while True:
+'''while True:
     # 获取当前时间
+    time.sleep(0.8)
     now = datetime.datetime.now()
     print(now.hour, now.minute, now.second)
     # 判断是否到了执行时间（每天中午12点）
@@ -98,5 +134,5 @@ while True:
         # 等待到第二天再执行
         time.sleep(24 * 60 * 60)
 
-
+'''
 

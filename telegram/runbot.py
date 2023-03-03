@@ -16,18 +16,35 @@ proxies = {
 def getinfo(request):
     if request.body:
         data = request.body.decode('utf-8')
-        print('\n\n'+str(data)+'\n\n')
         data_json = json.loads(data)
+        print(data_json)
+        if 'status' in data_json:
+            return False
         if 'channel_post' in data_json:
             channel_id = data_json['channel_post']['chat']['id']
             channel_text = data_json['channel_post']['text']
-            data = {'user':channel_id, 'text':channel_text}
+            data = {'chat':channel_id,'text':channel_text}
         elif 'message' in data_json:
-            user_id = data_json['message']['from']['id']
-            user_text = data_json['message']['text']
-            data = {'user':user_id, 'text':user_text}
-        print(data)
-        return data
+            type = data_json['message']['chat']['type']
+            print(type)
+            if 'group' in type:
+                user_id = data_json['message']['from']['id'] #用户id
+                chat = data_json['message']['chat']['id']
+                user_text = data_json['message']['text'] #获取的内容
+                is_bot = data_json['message']['from']['is_bot']
+                language_code = data_json['message']['from']['language_code']
+                name = data_json['message']['from']['last_name'] + data_json['message']['from']['first_name']
+                data = {'name':name,'chat':chat,'user': user_id,'text':user_text,'is_bot':is_bot,'language_code':language_code}
+            elif type == 'private':
+                user_id = data_json['message']['from']['id']
+                user_text = data_json['message']['text']
+                chat = data_json['message']['chat']['id']
+                is_bot = data_json['message']['from']['is_bot']
+                language_code = data_json['message']['from']['language_code']
+                name = data_json['message']['from']['last_name'] + data_json['message']['from']['first_name']
+                data = {'name':name, 'chat':user_id, 'text':user_text, 'is_bot':is_bot, 'language_code':language_code}
+
+    return data
 
 
 def postdata(senddata):
@@ -44,6 +61,8 @@ def postdata(senddata):
     else:
         code = False
     return code
+
+
 def mess(user_id):
     if user_id is None:
         user_id = -1001501401953
@@ -64,7 +83,6 @@ def mess(user_id):
             tele = selectornewdata.xpath("//b[@class='bq-wg']/a/text()")[0]
             link = re.findall(r"window.open\('(.*?)'\);", link)
             data = article_content[0] + '\n' + link[0] + '\n#' + tele + ' '
-            print(data)
             senddata = {'user': user_id, 'text': data}
             postdata(senddata=senddata)
 
@@ -72,7 +90,7 @@ def mess(user_id):
 
 
 def mesopenai(text):
-    openai.api_key = ("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")
+    openai.api_key = ("**")
     os.environ["HTTP_PROXY"] = proxies["http"]
     os.environ["HTTPS_PROXY"] = proxies["https"]
     response = requests.post(
@@ -85,36 +103,45 @@ def mesopenai(text):
             "model": "text-davinci-003",
             "prompt": text,
             "temperature": 0.7,
-            "max_tokens": 256,
+            "max_tokens": 512,
             "top_p": 1,
             "frequency_penalty": 0,
             "presence_penalty": 0
         }, proxies=proxies)
-    aidata = response.json()['choices'][0]['text']
-    print(aidata)
+    if 'Incorrect' in response.json():
+        aidata = 'key失效'
+    else:
+        aidata = response.json()['choices'][0]['text']
     return aidata
 
 def post(request):
     try:
-        text = getinfo(request)['text']
-        user_id = getinfo(request).get('user')
-        if request.body:
-            print(user_id, text)
-            if user_id < 0 and text == '资源':
-                mess(user_id=user_id)
-            elif '/test ' in text:
-                print('分支二')
-                senddata = {'user': user_id, 'text':'稍等几秒钟'}
-
-                postdata(senddata)
-                text = mesopenai(text=text.split('/test ')[1].strip())
-                senddata = {'user': user_id, 'text':text}
-                postdata(senddata)
-            else:
-                senddata = {'user': user_id, 'text': text}
-                postdata(senddata)
+        bigdata = getinfo(request)
     except:
-        print('在线刷新')
+        print('刷新')
+        return HttpResponse('No success')
+    text = bigdata['text']
+    user_id = bigdata['chat']
+    if request.body:
+        print(user_id, text)
+        if user_id < 0 and text == '资源':
+            mess(user_id=user_id)
+        elif '/test ' in text:
+            print('分支二')
+            senddata = {'user': user_id, 'text':'稍等几秒钟'}
+            postdata(senddata)
+            text = mesopenai(text=text.split('/test ')[1].strip())
+            senddata = {'user': user_id, 'text':text}
+            postdata(senddata)
+        elif text == '我的信息':
+            print('分支三')
+            result = re.sub(r'[\'\"{}]', '', str(bigdata))
+            result = re.sub(r',', '\n', result)
+            senddata = {'user': user_id, 'text':str(result)}
+            postdata(senddata)
+        else:
+            senddata = {'user': user_id, 'text': text}
+            postdata(senddata)
     return HttpResponse('success')
 
 

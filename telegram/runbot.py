@@ -13,17 +13,8 @@ proxies = {
     "https": "http://127.0.0.1:7890"
 }
 
+bot_token = "" #填写机器人tk
 
-#---------跟简单的方式接收信息
-'''from telegram import Update
-import json
-
-def handle_webhook_request(request):
-    update = Update.de_json(json.loads(request.body), bot)
-    message = update.message
-    chat_id = message.chat_id
-    text = message.text
-'''    # do something with the chat_id and text
 
 def getinfo(request):
     data = {}
@@ -62,7 +53,6 @@ def getinfo(request):
         pass
     return data
 
-bot_token = "6290859152:AAF7KhxgW7ReuImLxy0gYL-WbCtx81SLkbo"
 def postdata(senddata):
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     data = {
@@ -73,11 +63,11 @@ def postdata(senddata):
     response = requests.post(url, json=data, proxies=proxies)
     return response.ok
 
-
+#这段******
 def mess(user_id):
     if user_id is None:
         user_id = -1001501401953
-    url = 'https://www.10fzw.com/'
+    url = 'https://www.10fzw.com/'  #IP = 101.33.117.233
     data = requests.get(url=url, proxies=proxies).text
     selector = etree.HTML(data)
     id = selector.xpath("//div[@class='center']/div[@class='title']/font/text()")
@@ -96,9 +86,9 @@ def mess(user_id):
             data = article_content[0] + '\n' + link[0] + '\n#' + tele + ' '
             senddata = {'user': user_id, 'text': data}
             postdata(senddata=senddata)
+#^以上代码国内可用国外连不上
 
-
-openai.api_key = ("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")
+openai.api_key = ("key")  #openai key
 os.environ["HTTP_PROXY"] = proxies["http"]
 os.environ["HTTPS_PROXY"] = proxies["https"]
 
@@ -131,7 +121,6 @@ OPENAI_HEADERS = {
     'Content-Type': "application/json",
     'Authorization': f"Bearer {openai.api_key}"
 }
-
 def eopenai(text):
     payload = {"input":"","instruction":text,"temperature":0.5,"top_p":1}
     response = requests.post(url=OPENAI_EDIT_URL, json=payload, headers=OPENAI_HEADERS)
@@ -147,7 +136,6 @@ def post(request):
         bigdata = getinfo(request)
     except:
         return HttpResponse('No success')
-
     text = bigdata.get('text')
     user_id = bigdata.get('chat')
     if request.body:
@@ -177,15 +165,5 @@ def post(request):
         else:
             senddata = {'user': user_id, 'text': text}
             postdata(senddata)
-
     return HttpResponse('success')
 
-'''import threading
-
-# 定义 runs_thread 函数
-def runs_thread(interval):
-    print("Timer thread is running")
-
-# 启动 Timer 线程
-interval = 1  # 1 秒钟调用一次 runs_thread
-threading.Timer(interval, runs_thread, [interval]).start()'''

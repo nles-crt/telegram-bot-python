@@ -13,54 +13,65 @@ proxies = {
     "https": "http://127.0.0.1:7890"
 }
 
+
+#---------跟简单的方式接收信息
+'''from telegram import Update
+import json
+
+def handle_webhook_request(request):
+    update = Update.de_json(json.loads(request.body), bot)
+    message = update.message
+    chat_id = message.chat_id
+    text = message.text
+'''    # do something with the chat_id and text
+
 def getinfo(request):
-    if request.body:
-        data = request.body.decode('utf-8')
-        data_json = json.loads(data)
+    data = {}
+    try:
+        data_json = json.loads(request.body.decode('utf-8'))
         print(data_json)
         if 'status' in data_json:
             return False
-        if 'channel_post' in data_json:
-            channel_id = data_json['channel_post']['chat']['id']
-            channel_text = data_json['channel_post']['text']
-            data = {'chat':channel_id,'text':channel_text}
+        elif 'channel_post' in data_json:
+            data = {
+                'chat': data_json['channel_post']['chat']['id'],
+                'text': data_json['channel_post']['text']
+            }
         elif 'message' in data_json:
-            type = data_json['message']['chat']['type']
-            print(type)
-            if 'group' in type:
-                user_id = data_json['message']['from']['id'] #用户id
-                chat = data_json['message']['chat']['id']
-                user_text = data_json['message']['text'] #获取的内容
-                is_bot = data_json['message']['from']['is_bot']
-                language_code = data_json['message']['from']['language_code']
-                name = data_json['message']['from']['last_name'] + data_json['message']['from']['first_name']
-                data = {'name':name,'chat':chat,'user': user_id,'text':user_text,'is_bot':is_bot,'language_code':language_code}
-            elif type == 'private':
-                user_id = data_json['message']['from']['id']
-                user_text = data_json['message']['text']
-                chat = data_json['message']['chat']['id']
-                is_bot = data_json['message']['from']['is_bot']
-                language_code = data_json['message']['from']['language_code']
-                name = data_json['message']['from']['last_name'] + data_json['message']['from']['first_name']
-                data = {'name':name, 'chat':user_id, 'text':user_text, 'is_bot':is_bot, 'language_code':language_code}
-
+            message = data_json['message']
+            chat_type = message['chat']['type']
+            if 'group' in chat_type:
+                data = {
+                    'name': message['from'].get('last_name', '') + message['from'].get('first_name', ''),
+                    'chat': message['chat']['id'],
+                    'user': message['from']['id'],
+                    'text': message['text'],
+                    'is_bot': message['from'].get('is_bot', False),
+                    'language_code': message['from'].get('language_code', '')
+                }
+            elif chat_type == 'private':
+                data = {
+                    'name': message['from'].get('last_name', '') + message['from'].get('first_name', ''),
+                    'chat': message['chat']['id'],
+                    'text': message['text'],
+                    'user': message['from']['id'],
+                    'is_bot': message['from'].get('is_bot', False),
+                    'language_code': message['from'].get('language_code', '')
+                }
+    except json.JSONDecodeError:
+        pass
     return data
 
-
+bot_token = "6290859152:AAF7KhxgW7ReuImLxy0gYL-WbCtx81SLkbo"
 def postdata(senddata):
-    headers = {'Content-Type': 'application/json'}
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     data = {
-        'chat_id': str(senddata['user']),
-        'text': senddata['text'],
-        'parse_mode':'Markdown'
+        "chat_id": str(senddata["user"]),
+        "text": senddata["text"],
+        "parse_mode": "Markdown"
     }
-    print(data)
-    send_text = 'https://api.telegram.org/bot6290859152:AAF7KhxgW7ReuImLxy0gYL-WbCtx81SLkbo/sendMessage'
-    if requests.post(url=send_text,proxies=proxies, headers=headers,json=data).status_code == 200:
-        code = True
-    else:
-        code = False
-    return code
+    response = requests.post(url, json=data, proxies=proxies)
+    return response.ok
 
 
 def mess(user_id):
@@ -87,12 +98,11 @@ def mess(user_id):
             postdata(senddata=senddata)
 
 
-
+openai.api_key = ("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")
+os.environ["HTTP_PROXY"] = proxies["http"]
+os.environ["HTTPS_PROXY"] = proxies["https"]
 
 def mesopenai(text):
-    openai.api_key = ("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")
-    os.environ["HTTP_PROXY"] = proxies["http"]
-    os.environ["HTTPS_PROXY"] = proxies["https"]
     response = requests.post(
         "https://api.openai.com/v1/completions",
         headers={
@@ -100,59 +110,82 @@ def mesopenai(text):
             "Authorization": f"Bearer {openai.api_key}",
         },
         json={
-            "model": "text-davinci-003",
+            "model": 'text-davinci-003',
             "prompt": text,
             "temperature": 0.7,
             "max_tokens": 512,
             "top_p": 1,
             "frequency_penalty": 0,
             "presence_penalty": 0
-        }, proxies=proxies)
-    print(response.json())
+        }
+    )
     if 'error' in response.json():
         aidata = 'key失效'
     else:
         aidata = response.json()['choices'][0]['text']
     return aidata
 
+
+OPENAI_EDIT_URL = "https://api.openai.com/v1/engines/text-davinci-edit-001/edits"
+OPENAI_HEADERS = {
+    'Content-Type': "application/json",
+    'Authorization': f"Bearer {openai.api_key}"
+}
+
+def eopenai(text):
+    payload = {"input":"","instruction":text,"temperature":0.5,"top_p":1}
+    response = requests.post(url=OPENAI_EDIT_URL, json=payload, headers=OPENAI_HEADERS)
+    if 'error' in response.json():
+        aidata = 'key失效'
+    else:
+        aidata = response.json()['choices'][0]['text']
+    return aidata
+
+
 def post(request):
     try:
         bigdata = getinfo(request)
     except:
-        print('刷新')
         return HttpResponse('No success')
-    text = bigdata['text']
-    user_id = bigdata['chat']
+
+    text = bigdata.get('text')
+    user_id = bigdata.get('chat')
     if request.body:
-        print(user_id, text)
         if user_id < 0 and text == '资源':
             mess(user_id=user_id)
+        elif '/start' in text:
+            senddata = {'user': user_id, 'text': '使用方式\n/test  --->text-davinci-003 \n /code  --->text-davinci-edit-001 \n 试着发送/test 给我写一段php 接口'}
+            postdata(senddata)
         elif '/test ' in text:
-            print('分支二')
             senddata = {'user': user_id, 'text':'稍等几秒钟'}
             postdata(senddata)
-            text = mesopenai(text=text.split('/test ')[1].strip())
-            senddata = {'user': user_id, 'text':text}
+            M_TEXT = text
+            text = mesopenai(text=re.search(r'/test (.*)', text).group(1))
+            senddata = {'user': user_id, 'text': f"{re.search(r'/test (.*)', M_TEXT).group(1)}" + text}
+            postdata(senddata)
+        elif '/code ' in text:
+            senddata = {'user': user_id, 'text': '稍等几秒钟'}
+            postdata(senddata)
+            M_TEXT = text
+            text = eopenai(text=re.search(r'/code (.*)', text).group(1))
+            senddata = {'user': user_id, 'text': f"{re.search(r'/code (.*)', M_TEXT).group(1)}\n" + text}
             postdata(senddata)
         elif text == '我的信息':
-            print('分支三')
-            result = re.sub(r'[\'\"{}]', '', str(bigdata))
-            result = re.sub(r',', '\n', result)
-            senddata = {'user': user_id, 'text':str(result)}
+            result = re.sub(r'[\'\"{}]', '', str(bigdata)).replace(',', '\n')
+            senddata = {'user': user_id, 'text': result}
             postdata(senddata)
         else:
             senddata = {'user': user_id, 'text': text}
             postdata(senddata)
+
     return HttpResponse('success')
 
-import threading
+'''import threading
 
-def do_something():
-    mess(None)
+# 定义 runs_thread 函数
+def runs_thread(interval):
+    print("Timer thread is running")
 
-def run_thread(interval):
-    threading.Timer(interval, runs_thread, [interval]).start()
-    do_something()
-
-# 在每5秒钟执行一次函数
-run_thread(60*60*24)
+# 启动 Timer 线程
+interval = 1  # 1 秒钟调用一次 runs_thread
+threading.Timer(interval, runs_thread, [interval]).start()'''

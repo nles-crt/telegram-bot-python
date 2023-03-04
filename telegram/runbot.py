@@ -90,7 +90,7 @@ def mess(user_id):
 
 
 def mesopenai(text):
-    openai.api_key = ("**")
+    openai.api_key = ("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")
     os.environ["HTTP_PROXY"] = proxies["http"]
     os.environ["HTTPS_PROXY"] = proxies["https"]
     response = requests.post(
@@ -108,7 +108,8 @@ def mesopenai(text):
             "frequency_penalty": 0,
             "presence_penalty": 0
         }, proxies=proxies)
-    if 'Incorrect' in response.json():
+    print(response.json())
+    if 'error' in response.json():
         aidata = 'key失效'
     else:
         aidata = response.json()['choices'][0]['text']
@@ -144,22 +145,14 @@ def post(request):
             postdata(senddata)
     return HttpResponse('success')
 
+import threading
 
+def do_something():
+    mess(None)
 
-        #href_content = selector.xpath('//ul/ul/li[@class='new']/a/@href')
+def run_thread(interval):
+    threading.Timer(interval, runs_thread, [interval]).start()
+    do_something()
 
-
-'''while True:
-    # 获取当前时间
-    time.sleep(0.8)
-    now = datetime.datetime.now()
-    print(now.hour, now.minute, now.second)
-    # 判断是否到了执行时间（每天中午12点）
-    if now.hour == 12 and now.minute == 0 and now.second == 0:
-        # 执行函数
-        mess(None)
-        # 等待到第二天再执行
-        time.sleep(24 * 60 * 60)
-
-'''
-
+# 在每5秒钟执行一次函数
+run_thread(60*60*24)
